@@ -32,6 +32,20 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "${{ github.workspace }}/painlessui-navigator.jks"
 
+      - name: Verify JKS integrity
+        run: |
+          echo "=== JKS file size ==="
+          wc -c "${{ github.workspace }}/painlessui-navigator.jks"
+          echo "=== JKS SHA256 ==="
+          sha256sum "${{ github.workspace }}/painlessui-navigator.jks"
+          echo "=== keytool list (password masked by GH Actions) ==="
+          keytool -list \
+            -keystore "${{ github.workspace }}/painlessui-navigator.jks" \
+            -storepass "${{ secrets.KEYSTORE_STORE_PASSWORD }}" \
+            -v 2>&1 | grep -E '(Keystore type|Your keystore contains|Alias name|Error|Exception)'
+          echo "=== password byte length ==="
+          printf '%s' "${{ secrets.KEYSTORE_STORE_PASSWORD }}" | wc -c
+
       - name: Build signed release APK
         run: |
           ./gradlew assembleRelease \
