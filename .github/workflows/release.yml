@@ -25,15 +25,24 @@ jobs:
         run: chmod +x gradlew
 
       - name: Decode keystore
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > painlessui-navigator.jks
-          cat <<EOF > keystore.properties
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > painlessui-navigator.jks
+            cat <<EOF > keystore.properties
           storeFile=$(pwd)/painlessui-navigator.jks
-          storePassword=${{ secrets.KEYSTORE_STORE_PASSWORD }}
-          keyAlias=${{ secrets.KEYSTORE_KEY_ALIAS }}
-          keyPassword=${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          storePassword=$KEYSTORE_STORE_PASSWORD
+          keyAlias=$KEYSTORE_KEY_ALIAS
+          keyPassword=$KEYSTORE_KEY_PASSWORD
           EOF
+            echo "Keystore decoded and keystore.properties written."
+          else
+            echo "No KEYSTORE_BASE64 secret found — building unsigned release APK."
+          fi
 
       - name: Build Release APK
         run: ./gradlew assembleRelease --no-daemon
@@ -55,14 +64,14 @@ jobs:
 
             ### Install
             1. Download `payne-less-ui-navigator.apk` below
-            2. `adb install payne-less-ui-navigator.apk`  
+            2. `adb install payne-less-ui-navigator.apk`
                — or sideload via your file manager
             3. **Settings → Accessibility → Painless UI: Navigator** → Enable
             4. Disable your OEM gesture/navigation app
 
             ### Resource Usage
-            - APK size: ~22.75 KB  
-            - RAM: ~5 MB (PSS)  
+            - APK size: ~22.75 KB
+            - RAM: ~5 MB (PSS)
             - No launcher icon, no activities
 
             See [README](https://github.com/thedinyamum/payne-less-ui-navigator#readme) for tuning and build instructions.
