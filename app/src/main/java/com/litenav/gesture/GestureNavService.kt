@@ -14,17 +14,11 @@ class GestureNavService : AccessibilityService() {
     private var wm: WindowManager? = null
 
     // ---- tunables ----
-    private val stripHeightDp = 5            // true-edge sliver only. Anything above this (browser
-                                              // search bars, file-manager rows, etc.) passes through
-                                              // untouched since the overlay never claims that space.
-                                              // Swipes must start within this ~5dp band at the very
-                                              // bottom of the screen, same as stock gesture-nav.
+    private val stripHeightDp = 5            // true-edge sliver only.
     private val minSwipeDistancePx = 60      // upward travel required to count as swipe
-    private val maxHorizontalDriftPx = 80    // if finger drifts sideways more than this, ignore
-                                              // (filters out diagonal drags / list-item swipes)
-    private val rightZoneFraction = 2f / 3f  // right zone starts at this fraction of screen width
     private val holdThresholdMs = 300L       // pause-at-peak longer than this = "hold" -> Recents
     private val maxTotalGestureMs = 1500L    // ignore anything longer than this (accidental drag)
+    private val rightZoneFraction = 0.33f    // right ~1/3 is Back, rest is Home/Recents
     // ------------------
 
     private var downX = 0f
@@ -62,16 +56,8 @@ class GestureNavService : AccessibilityService() {
                 setWillNotDraw(true)
             }
             override fun onTouchEvent(event: MotionEvent): Boolean {
-                if (event.action == MotionEvent.ACTION_UP) {
-                    performClick()
-                }
                 handleTouch(event)
                 return true
-            }
-
-            @Suppress("RedundantOverride")
-            override fun performClick(): Boolean {
-                return super.performClick()
             }
         }
 
@@ -92,6 +78,7 @@ class GestureNavService : AccessibilityService() {
             MotionEvent.ACTION_MOVE -> {
                 if (!reachedThreshold) {
                     val dy = downY - event.rawY
+                    // Driftlock removed as requested
                     if (dy >= minSwipeDistancePx) {
                         reachedThreshold = true
                         reachedThresholdTime = event.eventTime
@@ -119,17 +106,22 @@ class GestureNavService : AccessibilityService() {
 
     private fun fireAction(xPos: Float, holdDurationMs: Long) {
         val screenWidth = resources.displayMetrics.widthPixels
-        val inRightZone = xPos >= screenWidth * rightZoneFraction
-
+        
         when {
-            // Right zone always means Back, regardless of hold - matches
-            // "quick swipe on right" spec; no hold variant defined for Back.
-            inRightZone -> performGlobalAction(GLOBAL_ACTION_BACK)
-
-            // Anywhere else: hold at peak decides Home vs Recents.
-            holdDurationMs >= holdThresholdMs -> performGlobalAction(GLOBAL_ACTION_RECENTS)
-
-            else -> performGlobalAction(GLOBAL_ACTION_HOME)
+            // Hold anywhere: Recents
+            holdDurationMs >= holdThresholdMs -> {
+                performGlobalAction(GLOBAL_ACTION_RECENTS)
+            }
+            
+            // Right zone: Back
+            xPos > screenWidth * (1 - rightZoneFraction) -> {
+                performGlobalAction(GLOBAL_ACTION_BACK)
+            }
+            
+            // Everywhere else: Home
+            else -> {
+                performGlobalAction(GLOBAL_ACTION_HOME)
+            }
         }
     }
 
