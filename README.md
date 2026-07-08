@@ -39,6 +39,8 @@ Control center if it is the one that popups out from the bottom instead of being
 
 Recent Apps if the OEM used their own version tied to a navigation utility.
 
+From my side, the only thing you lose is landscape navigation, I don't use landscape nor can I figure it, if you can, edit the code and create a PR commrade! After all it is our code...
+
 ## Build
 
 Standard Android Studio / Gradle project. Open the root folder, let Gradle
@@ -89,13 +91,13 @@ accessibility service only, nothing to open.
 
 Release build:
 
-- APK size: ~22.5 KB
+- APK size: ~22.75 KB
 - Post install: ~106 KB
 - RAM usage: ~5 MB (PSS)
 - No activities
 - Single overlay view
 - No launcher icon
-- 148 Lines of code logic
+- 140 Lines of code logic
 
 ## Touch passthrough
 
