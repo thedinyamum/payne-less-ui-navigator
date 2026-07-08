@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  App icon for Painless UI: Navigator.
+  Design: circular badge containing a small 3-line "hamburger" stack
+  (top) merging into a back-arrow / play-style chevron (bottom),
+  symbolizing "menu of navigation actions" -> Back/Home/Recents.
+  Single vector, single color, no bitmap - keeps APK tiny.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- outer circle outline -->
+    <path
+        android:pathData="M54,10 A44,44 0 1,1 53.9,10 Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:fillColor="#00000000" />
+
+    <!-- hamburger: 3 short horizontal lines, upper half -->
+    <path
+        android:pathData="M34,38 H74"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M34,48 H74"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M34,58 H74"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+
+    <!-- back-arrow / play chevron, lower half: a left-pointing chevron
+         (reads as "back") doubling visually as a play-triangle rotated -->
+    <path
+        android:pathData="M62,70 L46,80 L62,90 Z"
+        android:fillColor="#FFFFFF" />
+
+</vector>

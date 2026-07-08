@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Payne-less UI: Navigator</string>
+    <string name="service_description">Detects bottom-edge swipes and triggers Back / Home / Recents. No data collected.</string>
+</resources>
