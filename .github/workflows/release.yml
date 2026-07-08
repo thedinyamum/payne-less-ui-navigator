@@ -33,15 +33,15 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 --decode > painlessui-navigator.jks
-            cat <<EOF > keystore.properties
-          storeFile=$(pwd)/painlessui-navigator.jks
-          storePassword=$KEYSTORE_STORE_PASSWORD
-          keyAlias=$KEYSTORE_KEY_ALIAS
-          keyPassword=$KEYSTORE_KEY_PASSWORD
-          EOF
+            printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+              "$(pwd)/painlessui-navigator.jks" \
+              "$KEYSTORE_STORE_PASSWORD" \
+              "$KEYSTORE_KEY_ALIAS" \
+              "$KEYSTORE_KEY_PASSWORD" \
+              > keystore.properties
             echo "Keystore decoded and keystore.properties written."
           else
-            echo "No KEYSTORE_BASE64 secret found — building unsigned release APK."
+            echo "No KEYSTORE_BASE64 secret found - building unsigned release APK."
           fi
 
       - name: Build Release APK
@@ -65,8 +65,8 @@ jobs:
             ### Install
             1. Download `payne-less-ui-navigator.apk` below
             2. `adb install payne-less-ui-navigator.apk`
-               — or sideload via your file manager
-            3. **Settings → Accessibility → Painless UI: Navigator** → Enable
+               - or sideload via your file manager
+            3. **Settings -> Accessibility -> Painless UI: Navigator** -> Enable
             4. Disable your OEM gesture/navigation app
 
             ### Resource Usage
