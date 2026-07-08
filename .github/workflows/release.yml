@@ -32,17 +32,29 @@ jobs:
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 --decode > painlessui-navigator.jks
-            printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
-              "$(pwd)/painlessui-navigator.jks" \
-              "$KEYSTORE_STORE_PASSWORD" \
-              "$KEYSTORE_KEY_ALIAS" \
-              "$KEYSTORE_KEY_PASSWORD" \
-              > keystore.properties
-            echo "Keystore decoded and keystore.properties written."
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/painlessui-navigator.jks"
+            python3 - <<PYEOF
+import os
+ws = os.environ['GITHUB_WORKSPACE']
+lines = [
+    f"storeFile={ws}/painlessui-navigator.jks",
+    f"storePassword={os.environ['KEYSTORE_STORE_PASSWORD']}",
+    f"keyAlias={os.environ['KEYSTORE_KEY_ALIAS']}",
+    f"keyPassword={os.environ['KEYSTORE_KEY_PASSWORD']}",
+]
+with open(f"{ws}/keystore.properties", "w") as f:
+    f.write("\n".join(lines) + "\n")
+print("keystore.properties written OK")
+PYEOF
           else
             echo "No KEYSTORE_BASE64 secret found - building unsigned release APK."
           fi
+
+      - name: Dump keystore.properties (debug)
+        run: |
+          echo "--- keystore.properties ---"
+          cat "$GITHUB_WORKSPACE/keystore.properties" | sed 's/\(Password\|password\)=.*/\1=***/'
+          echo "--- end ---"
 
       - name: Build Release APK
         run: ./gradlew assembleRelease --no-daemon
