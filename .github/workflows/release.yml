@@ -9,6 +9,8 @@ jobs:
   release:
     name: Build & Release APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -19,76 +21,41 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
       - name: Decode keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
-          KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
-          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/painlessui-navigator.jks"
-            python3 - <<PYEOF
-import os
-ws = os.environ['GITHUB_WORKSPACE']
-lines = [
-    f"storeFile={ws}/painlessui-navigator.jks",
-    f"storePassword={os.environ['KEYSTORE_STORE_PASSWORD']}",
-    f"keyAlias={os.environ['KEYSTORE_KEY_ALIAS']}",
-    f"keyPassword={os.environ['KEYSTORE_KEY_PASSWORD']}",
-]
-with open(f"{ws}/keystore.properties", "w") as f:
-    f.write("\n".join(lines) + "\n")
-print("keystore.properties written OK")
-PYEOF
-          else
-            echo "No KEYSTORE_BASE64 secret found - building unsigned release APK."
-          fi
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "${{ github.workspace }}/painlessui-navigator.jks"
 
-      - name: Dump keystore.properties (debug)
+      - name: Build signed release APK
         run: |
-          echo "--- keystore.properties ---"
-          cat "$GITHUB_WORKSPACE/keystore.properties" | sed 's/\(Password\|password\)=.*/\1=***/'
-          echo "--- end ---"
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file="${{ github.workspace }}/painlessui-navigator.jks" \
+            -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_STORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.KEYSTORE_KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.KEYSTORE_KEY_PASSWORD }}"
 
-      - name: Build Release APK
-        run: ./gradlew assembleRelease --no-daemon
+      - name: Clean up keystore
+        if: always()
+        run: rm -f "${{ github.workspace }}/painlessui-navigator.jks"
 
       - name: Rename APK
         run: |
-          mkdir -p dist
-          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
-          cp "$APK" dist/payne-less-ui-navigator.apk
+          mv app/build/outputs/apk/release/app-release.apk \
+             payne-less-ui-navigator.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: Payne-less UI Navigator ${{ github.ref_name }}
-          body: |
-            ## Payne-less UI: Navigator ${{ github.ref_name }}
-
-            A lightweight accessibility service replacing OEM navigation gestures.
-
-            ### Install
-            1. Download `payne-less-ui-navigator.apk` below
-            2. `adb install payne-less-ui-navigator.apk`
-               - or sideload via your file manager
-            3. **Settings -> Accessibility -> Painless UI: Navigator** -> Enable
-            4. Disable your OEM gesture/navigation app
-
-            ### Resource Usage
-            - APK size: ~22.75 KB
-            - RAM: ~5 MB (PSS)
-            - No launcher icon, no activities
-
-            See [README](https://github.com/thedinyamum/payne-less-ui-navigator#readme) for tuning and build instructions.
-          files: dist/payne-less-ui-navigator.apk
-          draft: false
-          prerelease: false
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: payne-less-ui-navigator.apk
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
