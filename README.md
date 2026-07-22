@@ -1,4 +1,4 @@
-# Painless UI: Navigator
+# Payneless UI: Navigator
 
 (internal package name as com.litenav.gesture)
 
@@ -18,8 +18,8 @@ No app, no launcher icon, customize via code
 
 Replaces OEM navigator with inspiration from modern Android navigation (13 and above like) 
 
-- **Quick swipe up, right ~1/3 of the strip** → Back
-- **Quick swipe up, middle/left ~2/3 of the strip** → Home
+- **Quick swipe up, right ~1/4 of the strip** → Back
+- **Quick swipe up, middle/left ~3/4 of the strip** → Home
 - **Swipe up and hold (pause before lifting), anywhere on the strip** → Recents
 
 Works system-wide, inside any app, since it's a system-level accessibility
@@ -38,8 +38,6 @@ If you've a phone like me with Vivo's shitty UI logic of a single app handling a
 Control center if it is the one that popups out from the bottom instead of being in the notification shade like intended by the Green Robot that loves rubbing apples on its butt
 
 Recent Apps if the OEM used their own version tied to a navigation utility.
-
-From my side, the only thing you lose is landscape navigation, I don't use landscape nor can I figure it, if you can, edit the code and create a PR commrade! After all it is our code...
 
 ## Build
 
@@ -81,7 +79,7 @@ accessibility service only, nothing to open.
 
 1. Install the APK (e.g. `adb install app-release.apk`).
 2. Go to **Settings → Accessibility** (or Settings → Accessibility →
-   Installed apps, on some OEM skins) and find **Painless UI: Navigator**
+   Installed apps, on some OEM skins) and find **Payneless UI: Navigator**
    in the list.
 3. Toggle it on, accept the permission dialog.
 4. Disable/uninstall the OEM gesture app.
@@ -93,11 +91,11 @@ Release build:
 
 - APK size: ~22.75 KB
 - Post install: ~106 KB
-- RAM usage: ~5 MB (PSS)
+- RAM usage: ~9.4 MB (PSS, includes system)
 - No activities
 - Single overlay view
 - No launcher icon
-- 140 Lines of code logic
+- 204 Lines of code logic
 
 ## Touch passthrough
 
