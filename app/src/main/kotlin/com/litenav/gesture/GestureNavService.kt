@@ -1,9 +1,11 @@
 package com.litenav.gesture
 
 import android.accessibilityservice.AccessibilityService
+import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.view.Gravity
 import android.view.MotionEvent
+import android.view.Surface
 import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
@@ -18,7 +20,7 @@ class GestureNavService : AccessibilityService() {
     private val minSwipeDistancePx = 60      // upward travel required to count as swipe
     private val holdThresholdMs = 300L       // pause-at-peak longer than this = "hold" -> Recents
     private val maxTotalGestureMs = 1500L    // ignore anything longer than this (accidental drag)
-    private val rightZoneFraction = 0.33f    // right ~1/3 is Back, rest is Home/Recents
+    private val rightZoneFraction = 0.25f    // right 1/4 is Back, rest is Home/Recents
     // ------------------
 
     private var downX = 0f
@@ -33,6 +35,44 @@ class GestureNavService : AccessibilityService() {
     override fun onServiceConnected() {
         wm = getSystemService(WINDOW_SERVICE) as WindowManager
         addOverlay()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        updateLayout()
+    }
+
+    private fun updateLayout() {
+        val overlay = overlay ?: return
+        val wm = wm ?: return
+        val params = overlay.layoutParams as? WindowManager.LayoutParams ?: return
+        val rotation = wm.defaultDisplay?.rotation ?: Surface.ROTATION_0
+        val density = resources.displayMetrics.density
+        val thicknessPx = (stripHeightDp * density).toInt()
+
+        when (rotation) {
+            Surface.ROTATION_0 -> {
+                params.gravity = Gravity.BOTTOM
+                params.width = WindowManager.LayoutParams.MATCH_PARENT
+                params.height = thicknessPx
+            }
+            Surface.ROTATION_90 -> {
+                params.gravity = Gravity.RIGHT
+                params.width = thicknessPx
+                params.height = WindowManager.LayoutParams.MATCH_PARENT
+            }
+            Surface.ROTATION_180 -> {
+                params.gravity = Gravity.TOP
+                params.width = WindowManager.LayoutParams.MATCH_PARENT
+                params.height = thicknessPx
+            }
+            Surface.ROTATION_270 -> {
+                params.gravity = Gravity.LEFT
+                params.width = thicknessPx
+                params.height = WindowManager.LayoutParams.MATCH_PARENT
+            }
+        }
+        wm.updateViewLayout(overlay, params)
     }
 
     private fun addOverlay() {
@@ -63,13 +103,18 @@ class GestureNavService : AccessibilityService() {
 
         overlay = view
         wm?.addView(view, params)
+        updateLayout()
     }
 
     private fun handleTouch(event: MotionEvent) {
+        val rotation = wm?.defaultDisplay?.rotation ?: Surface.ROTATION_0
+        val viewHeight = overlay?.height?.toFloat() ?: 1f
+        val viewWidth = overlay?.width?.toFloat() ?: 1f
+
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                downX = event.rawX
-                downY = event.rawY
+                downX = event.x
+                downY = event.y
                 downTime = event.eventTime
                 reachedThreshold = false
                 reachedThresholdTime = 0L
@@ -77,7 +122,13 @@ class GestureNavService : AccessibilityService() {
 
             MotionEvent.ACTION_MOVE -> {
                 if (!reachedThreshold) {
-                    val dy = downY - event.rawY
+                    val dy = when (rotation) {
+                        Surface.ROTATION_0 -> downY - event.y
+                        Surface.ROTATION_90 -> downX - event.x
+                        Surface.ROTATION_270 -> event.x - downX
+                        Surface.ROTATION_180 -> event.y - downY
+                        else -> downY - event.y
+                    }
                     // Driftlock removed as requested
                     if (dy >= minSwipeDistancePx) {
                         reachedThreshold = true
@@ -92,7 +143,15 @@ class GestureNavService : AccessibilityService() {
 
                 if (reachedThreshold && totalElapsed <= maxTotalGestureMs) {
                     val holdDuration = now - reachedThresholdTime
-                    fireAction(downX, holdDuration)
+                    
+                    val posAlongBar = when (rotation) {
+                        Surface.ROTATION_0 -> downX
+                        Surface.ROTATION_90 -> viewHeight - downY
+                        Surface.ROTATION_270 -> downY
+                        Surface.ROTATION_180 -> viewWidth - downX
+                        else -> downX
+                    }
+                    fireAction(posAlongBar, holdDuration)
                 }
 
                 reachedThreshold = false
@@ -104,8 +163,14 @@ class GestureNavService : AccessibilityService() {
         }
     }
 
-    private fun fireAction(xPos: Float, holdDurationMs: Long) {
-        val screenWidth = resources.displayMetrics.widthPixels
+    private fun fireAction(posAlongBar: Float, holdDurationMs: Long) {
+        val rotation = wm?.defaultDisplay?.rotation ?: Surface.ROTATION_0
+        val overlay = overlay ?: return
+        val barLength = if (rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) {
+            overlay.height.toFloat()
+        } else {
+            overlay.width.toFloat()
+        }
         
         when {
             // Hold anywhere: Recents
@@ -114,7 +179,7 @@ class GestureNavService : AccessibilityService() {
             }
             
             // Right zone: Back
-            xPos > screenWidth * (1 - rightZoneFraction) -> {
+            posAlongBar > barLength * (1 - rightZoneFraction) -> {
                 performGlobalAction(GLOBAL_ACTION_BACK)
             }
             
